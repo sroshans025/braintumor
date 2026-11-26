@@ -13,7 +13,47 @@ Classifies a brain MRI slice into one of four classes with an Ultralytics **YOLO
 
 ## Results
 
-_Training in progress. This section will report accuracy, macro precision / recall / F1, per-class scores and the confusion matrix on the held-out test set._
+Scored once on the **held-out test set of 1,584 scans** that the model never saw during training or model selection.
+
+| Metric | Test set |
+| :-- | --: |
+| **Accuracy** | **96.09%** (1,522 / 1,584) |
+| Macro precision | 96.31% |
+| Macro recall | 96.00% |
+| Macro F1 | 95.98% |
+
+| Class | Precision | Recall | F1 | Scans |
+| :-- | --: | --: | --: | --: |
+| Glioma | 99.40% | 85.75% | 92.07% | 386 |
+| Meningioma | 92.71% | 98.99% | 95.75% | 398 |
+| No tumour | 93.90% | 100.00% | 96.85% | 400 |
+| Pituitary | 99.25% | 99.25% | 99.25% | 400 |
+
+Confusion matrix (rows are the true class, columns the prediction):
+
+| True \ Predicted | Glioma | Meningioma | No tumour | Pituitary |
+| :-- | --: | --: | --: | --: |
+| **Glioma** | **331** | 29 | 26 | 0 |
+| **Meningioma** | 1 | **394** | 0 | 3 |
+| **No tumour** | 0 | 0 | **400** | 0 |
+| **Pituitary** | 1 | 2 | 0 | **397** |
+
+<p align="center"><img src="eval_results/confusion_matrix.png" width="420" alt="Test-set confusion matrix"></p>
+
+**Reading the results**
+
+- Every no-tumour scan was recognised (100% recall), and pituitary tumours are almost perfect (99.25%).
+- When the model says *glioma* it is nearly always right (99.4% precision).
+- **Glioma is the weak spot**: 55 of 386 gliomas were missed, 26 of them called *no tumour*. That is the most serious error type for a screening tool, and the main thing to improve next (for example, class-weighted loss or a larger input size).
+- Validation accuracy peaked at **99.14%** (epoch 26), higher than the 96.09% test score. The original test images come from a somewhat different source than the training images, so the test number is the honest one to quote.
+
+### Training
+
+YOLO11m-cls, 320 × 320 input, batch 32, AdamW (lr 5e-4, cosine), early stopping with patience 15. Trained on an NVIDIA RTX 3050 Laptop GPU (4 GB), about 30 s per epoch; it stopped at epoch 41 and kept the epoch-26 weights.
+
+<p align="center"><img src="training_results/training_curves.png" width="760" alt="Training and validation loss, and validation accuracy per epoch"></p>
+
+The trained weights are in [`models/best.pt`](models/best.pt) (20 MB), and the full training log is in [`training_results/results.csv`](training_results/results.csv).
 
 ## Dataset
 
@@ -74,11 +114,11 @@ python convert_dataset.py
 python train.py
 #    CPU only:  python train.py --model yolo11n-cls.pt --device cpu --batch 16
 
-# 3. evaluate on the test set
-python evaluate.py --weights runs_classify/brain_tumor_yolo11/weights/best.pt --data data/test --imgsz 320
+# 3. evaluate on the test set (use runs_classify/brain_tumor_yolo11/weights/best.pt for your own run)
+python evaluate.py --weights models/best.pt --data data/test --imgsz 320
 
 # 4. predict on an image or a folder
-python predict.py --weights runs_classify/brain_tumor_yolo11/weights/best.pt --source path/to/scan.jpg
+python predict.py --weights models/best.pt --source path/to/scan.jpg --imgsz 320
 ```
 
 `evaluate.py` writes to `eval_results/`:
@@ -102,6 +142,9 @@ python predict.py --weights runs_classify/brain_tumor_yolo11/weights/best.pt --s
 ├── evaluate.py          # test-set metrics, reports, confusion matrix
 ├── predict.py           # inference on new images
 ├── run_pipeline.py      # prepare → train → evaluate in one command
+├── models/best.pt       # trained YOLO11m-cls weights
+├── eval_results/        # test-set metrics, predictions, confusion matrix
+├── training_results/    # per-epoch log, training curves, training arguments
 └── requirements.txt
 ```
 

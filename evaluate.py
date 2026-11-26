@@ -31,7 +31,10 @@ def main():
     rows = []
     for cls_idx, cls_name in enumerate(CLASSES):
         paths = sorted(p for p in (Path(args.data) / cls_name).iterdir() if p.suffix.lower() in IMG_EXTS)
-        for r in model.predict(source=paths, imgsz=args.imgsz, stream=True, verbose=False):
+        # A list source is sent as one batch, so feed it in chunks to fit small GPUs.
+        results = (r for i in range(0, len(paths), 32)
+                   for r in model.predict(source=paths[i:i + 32], imgsz=args.imgsz, verbose=False))
+        for r in results:
             probs = r.probs.data.cpu().numpy()
             rows.append({
                 "image": Path(r.path).name,

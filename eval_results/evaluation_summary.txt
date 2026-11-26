@@ -1,0 +1,6 @@
+Test images:     1584
+Correct:         1522
+Accuracy:        96.09%
+Macro precision: 96.31%
+Macro recall:    96.00%
+Macro F1:        95.98%

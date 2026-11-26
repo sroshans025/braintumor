@@ -80,10 +80,10 @@ def main():
         batch=args.batch,
         patience=args.patience,
         device=args.device,
-        project=args.project,
+        project=str(Path(args.project).resolve()),  # keep runs inside the project, not ~/runs
         name=args.name,
-        cache=True,
-        workers=max(2, min(8, os.cpu_count() or 2)),
+        cache="disk",       # RAM cache is copied into every worker on Windows and runs out of memory
+        workers=max(2, min(4, os.cpu_count() or 2)),
         amp=True,
         hsv_h=0.0,          # MRI is greyscale: hue/saturation jitter adds nothing
         hsv_s=0.0,
